@@ -1,0 +1,25 @@
+{
+  "name": "bw-gpk",
+  "version": "1.0.0",
+  "description": "This cli tool is to fetch the private keys from the Bitwarden Notes and load to the ssh-agent securely.",
+  "main": "bw-gpk.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stsvinc/bw-gpk.git"
+  },
+  "keywords": [
+    "bw-gpk"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bin": {
+    "bw-gpk": "./bw-gpk.js"
+  },
+  "bugs": {
+    "url": "https://github.com/stsvinc/bw-gpk/issues"
+  },
+  "homepage": "https://github.com/stsvinc/bw-gpk#readme"
+}
