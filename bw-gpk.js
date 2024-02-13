@@ -8,6 +8,7 @@ const path = require('path');
 //const userHomeDir = process.env.HOME;
 const userHomeDir = os.homedir();
 const directoryPath = userHomeDir + '/.bw-gpk';
+const configFilePath = userHomeDir + '/.ssh/config'
 
 try {
     fs.mkdirSync(directoryPath);
@@ -66,7 +67,7 @@ function process_bw_to_ssh(data) {
     for (const block of hostBlocks){
         configFileContent += block + "\n\n"
     }
-    const configFilePath = userHomeDir + '/.ssh/config'
+
     //console.log(configFileContent)
     const writeStreamHc = fs.createWriteStream(configFilePath);
 
@@ -115,7 +116,6 @@ function bw_check_status_go(noteName) {
             }
         }
     });
-
 }
 
 
@@ -138,6 +138,15 @@ function bw_lock_ssh_key_del() {
         } else {
             console.log(stdout)
             console.error(stderr)
+        }
+    });
+
+    // Delete the ssh config file when lock
+    fs.unlink(configFilePath, (err) => {
+        if (err) {
+            console.error('Error deleting comfig file [' + configFilePath + ']:', err);
+        } else {
+            console.log('SSH config file deleted:', path.basename(configFilePath));
         }
     });
 
