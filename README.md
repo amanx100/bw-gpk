@@ -10,7 +10,7 @@ To install `bw-gpk`, use npm:
 npm install -g bw-gpk
 ``` 
 
-Additionally, you need to have the Bitwarden CLI installed. You can install it with:
+Additionally, you need to have the Bitwarden CLI installed and accessable from your terminal. You can install it with:
 
 
 ```
