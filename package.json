@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/stsvinc/bw-gpk.git"
+    "url": "git+https://github.com/amanx100/bw-gpk.git"
   },
   "keywords": [
     "bw-gpk"
@@ -19,7 +19,7 @@
     "bw-gpk": "./bw-gpk.js"
   },
   "bugs": {
-    "url": "https://github.com/stsvinc/bw-gpk/issues"
+    "url": "https://github.com/amanx100/bw-gpk/issues"
   },
-  "homepage": "https://github.com/stsvinc/bw-gpk#readme"
+  "homepage": "https://github.com/amanx100/bw-gpk#readme"
 }
