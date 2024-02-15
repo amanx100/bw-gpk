@@ -1,6 +1,6 @@
 {
   "name": "bw-gpk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "This cli tool is to fetch the private keys from the Bitwarden Notes and load to the ssh-agent securely.",
   "main": "bw-gpk.js",
   "scripts": {
