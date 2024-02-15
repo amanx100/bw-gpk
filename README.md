@@ -1,6 +1,6 @@
 # bw-gpk
 
-**Bitwarden Get Private Key (bw-gpk)** is a command-line tool designed to fetch private keys from Bitwarden notes and securely load them into the SSH agent. It also assists in creating a well-formatted SSH config file.
+**Bitwarden Get Private Key (bw-gpk)** is a command-line tool designed to fetch private keys from Bitwarden notes and securely load them into the SSH agent. It also assists in creating and manage a well-formatted SSH config file.
 
 ## Installation
 
