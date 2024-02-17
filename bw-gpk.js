@@ -27,7 +27,7 @@ function process_bw_to_ssh(data) {
 
     const regex = /(-+)BEGIN(.*)KEY(-+)(\s.+)*END(.*)KEY(-+)/g;
     //const regexHost = /Host\s(.+)((\s).*(Hostname ).*\S)((\s).*(User ).*\S)/g;
-    const regexHost = /Host (.+)(\s^ .*\S .*\S)*/g;
+    const regexHost = /Host (\S+)(\s^ +\S+ +\S+ *)+/g;
     const keyBlocks = privateKeysString.match(regex);
     const hostBlocks = privateKeysString.match(regexHost);
 
