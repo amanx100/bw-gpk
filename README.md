@@ -47,6 +47,14 @@ npm install -g @bitwarden/cli
     -----END OPENSSH PRIVATE KEY-----
     
     ```
+    
+    NB: Please make sure that private keys are password less or unencrypted.
+    
+    >You can use the following command to remove the passphrase from your private key
+    
+    ```
+    ssh-keygen -p -f <PrivateKeyFile>
+    ```
 
 2.  **Using `bw-gpk`:** After creating the Bitwarden note, use the `bw-gpk` tool to load private keys into the SSH agent. Run the following command:
 
