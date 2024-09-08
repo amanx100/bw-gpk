@@ -4,12 +4,15 @@ const os = require('os');
 const {exec, execSync} = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const readlineSync = require('readline-sync');
 
 //const userHomeDir = process.env.HOME;
 const userHomeDir = os.homedir();
 const directoryPath = userHomeDir + '/.bw-gpk';
 const configFilePath = userHomeDir + '/.ssh/config'
+const bw = path.resolve('node_modules/.bin/bw');
 
+// Checking the .bw-gpk directory to keep the relevant files
 try {
     fs.mkdirSync(directoryPath);
     console.log('Directory created: ' + directoryPath);
@@ -94,7 +97,7 @@ function bw_get_item(noteName) {
 }
 
 
-function bw_check_status_go(noteName) {
+function bw_check_status_go_old(noteName) {
     exec('bw status', (error, stdout, stderr) => {
         if (error) {
             console.error(`Error executing command: ${error.message}`);
@@ -119,8 +122,31 @@ function bw_check_status_go(noteName) {
     });
 }
 
+async function bw_check_status_go(noteName) {
 
-function bw_lock_ssh_key_del() {
+    try {
+        let stdout = await execSync(bw + ` status`)
+        let bwStatus = JSON.parse(stdout)
+
+        if (bwStatus.status === "unlocked") {
+            bw_get_item(noteName)
+        } else if (bwStatus.status === "locked") {
+            console.log("Please unlock first.")
+            console.info("You can execute the following command:\n > bw-gpk unlock")
+        } else if (bwStatus.status === "unauthenticated") {
+            console.log("Please login and unlock then try again.")
+        } else {
+            console.log("Something is going wrong...")
+        }
+
+    }catch (e) {
+        console.error(e.message);
+    }
+}
+
+async function bw_lock_ssh_key_del() {
+
+
 
     exec('ssh-add -D', (error, stdout, stderr) => {
         if (error) {
@@ -132,27 +158,59 @@ function bw_lock_ssh_key_del() {
         }
     });
 
-    exec('bw lock', (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error executing command: ${error.message}`);
-            console.info("bw cli is not working well")
-        } else {
-            console.log(stdout)
-            console.error(stderr)
-        }
-    });
+
+    try {
+        const stdout = await execSync(bw + ` logout`).toString('utf8')
+        console.log(stdout)
+    }catch (e){
+        //console.log(e.message)
+    }
 
     // Delete the ssh config file when lock
-    fs.unlink(configFilePath, (err) => {
-        if (err) {
-            console.error('Error deleting comfig file [' + configFilePath + ']:', err);
-        } else {
-            console.log('SSH config file deleted:', path.basename(configFilePath));
-        }
-    });
+    if (fs.existsSync(configFilePath)) {
+        fs.unlink(configFilePath, (err) => {
+            if (err) {
+                console.error('Error deleting config file [' + configFilePath + ']:', err);
+            } else {
+                console.log('SSH config file deleted:', path.basename(configFilePath));
+            }
+        });
+    } else {
+        console.log('SSH Config File does not exist');
+    }
 
 }
 
+async function bw_unlock(){
+
+    try {
+        const username = readlineSync.question('Enter email address: ');
+
+        // Ask for password (masking the input)
+        const password = readlineSync.question('Enter password: ', {
+            hideEchoBack: true // Mask the input
+        });
+
+        const login_session = await execSync(bw + ` login ${username} ${password} --raw`).toString('utf8')
+
+        // Regular expression to match the string
+        const regex = /username or password is incorrect/i;  // 'i' flag for case-insensitive matching
+
+        if (regex.test(login_session)) {
+            console.log("Username or password is incorrect");
+        } else {
+            const unlocked_session = await execSync(bw + ` unlock ${password} --raw --session=${login_session}`).toString('utf8')
+            if(regex.test(unlocked_session)){
+                console.log("Username or password is incorrect");
+            } else {
+                console.log(unlocked_session)
+            }
+        }
+
+    } catch (e) {
+        //console.log(e.message)
+    }
+}
 
 let ssh_agent_sock = process.env.SSH_AUTH_SOCK;
 if (fs.existsSync(ssh_agent_sock)) {
@@ -161,7 +219,11 @@ if (fs.existsSync(ssh_agent_sock)) {
     if (typeof noteName == 'string') {
         if (noteName.toLowerCase() === "lock") {
             bw_lock_ssh_key_del()
-        } else {
+        }
+        else if (noteName == "unlock"){
+            bw_unlock()
+        }
+        else {
             bw_check_status_go(noteName)
         }
     } else {
