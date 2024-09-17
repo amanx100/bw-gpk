@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 
-const os = require('os');
-const {exec, execSync} = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import os from 'os';
+import clipboardy from 'clipboardy';
+import { exec, execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import readlineSync from 'readline-sync';
 
 //const userHomeDir = process.env.HOME;
 const userHomeDir = os.homedir();
 const directoryPath = userHomeDir + '/.bw-gpk';
 const configFilePath = userHomeDir + '/.ssh/config'
 
+// Checking the .bw-gpk directory to keep the relevant files
 try {
     fs.mkdirSync(directoryPath);
     console.log('Directory created: ' + directoryPath);
@@ -21,13 +24,14 @@ try {
     }
 }
 
-function process_bw_to_ssh(data) {
-    //console.log(data.notes)
-    let privateKeysString = data.notes
+async function process_ssh_config_pkey(data) {
+    //console.log(data)
+    //process.exit()
+
+    let privateKeysString = data
 
     const regex = /(-+)BEGIN(.*)KEY(-+)(\s.+)*END(.*)KEY(-+)/g;
-    //const regexHost = /Host\s(.+)((\s).*(Hostname ).*\S)((\s).*(User ).*\S)/g;
-    const regexHost = /Host (\S+)(\s^ +\S+ +\S+ *)+/g;
+    const regexHost = /Host (\S+ *)(\s +\S+ +\S+ *)+/g;
     const keyBlocks = privateKeysString.match(regex);
     const hostBlocks = privateKeysString.match(regexHost);
 
@@ -43,7 +47,7 @@ function process_bw_to_ssh(data) {
         writeStream.end(() => {
             console.log('Temp file created:', path.basename(tempFilePath));
 
-            exec('ssh-add ' + tempFilePath, (error, stdout, stderr) => {
+            exec(`chmod 600 ${tempFilePath} && ssh-add  ${tempFilePath}`, (error, stdout, stderr) => {
                 // Delete the temp file when done
                 fs.unlink(tempFilePath, (err) => {
                     if (err) {
@@ -74,102 +78,88 @@ function process_bw_to_ssh(data) {
 
     writeStreamHc.write(configFileContent);
     writeStreamHc.end(() => {
-        console.log('SSH Config file created:', );
+        console.log('SSH Config file created:', path.basename(configFilePath));
     });
 }
 
 
-function bw_get_item(noteName) {
+async function clear() {
 
-    exec('bw get item ' + noteName, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error executing command: ${error.message}`);
-        } else {
-            process_bw_to_ssh(JSON.parse(stdout))
-            if (stderr) {
-                console.error(`stderr: ${stderr}`);
-            }
-        }
-    });
-}
-
-
-function bw_check_status_go(noteName) {
-    exec('bw status', (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error executing command: ${error.message}`);
-            console.info("If bw cli is not installed yet then you can try to install using the following command.\n > npm install -g @bitwarden/cli")
-        } else {
-            let bwStatus = JSON.parse(stdout)
-            if (bwStatus.status === "unlocked") {
-                bw_get_item(noteName)
-            } else if (bwStatus.status === "locked") {
-                console.log("Bitwarden is locked! Please unlock first.")
-                console.info("You can execute the following command:\n > bw unlock")
-            } else if (bwStatus.status === "unauthenticated") {
-                console.log("Please login and unlock the bw cli then try again.")
+    const promise_agent_del = await new Promise((resolve, reject)=>{
+        exec('ssh-add -D', (error, stdout, stderr) => {
+            if (error) {
+                reject(error.message)
             } else {
-                console.log("Please check the bw cli tool is working well in your current terminal.")
+                resolve(stdout)
             }
+        });
+    })
 
-            if (stderr) {
-                console.error(`stderr: ${stderr}`);
+    const promise_file_del = await new Promise((resolve, reject)=>{
+        fs.unlink(configFilePath, (err) => {
+            if (err) {
+                reject(err.message)
+            } else {
+                resolve('SSH config file deleted:', path.basename(configFilePath))
             }
-        }
-    });
+        });
+    })
+
+    return {promise_agent_del, promise_file_del}
 }
 
 
-function bw_lock_ssh_key_del() {
+async function get_contents() {
 
-    exec('ssh-add -D', (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error executing command: ${error.message}`);
-            console.info("ssh-agent is not in working condition")
-        } else {
-            console.log(stdout)
-            console.error(stderr)
-        }
-    });
+    // Get the file path from command-line arguments
+    const filePath = process.argv[2];
 
-    exec('bw lock', (error, stdout, stderr) => {
-        if (error) {
-            console.error(`Error executing command: ${error.message}`);
-            console.info("bw cli is not working well")
-        } else {
-            console.log(stdout)
-            console.error(stderr)
-        }
-    });
-
-    // Delete the ssh config file when lock
-    fs.unlink(configFilePath, (err) => {
-        if (err) {
-            console.error('Error deleting comfig file [' + configFilePath + ']:', err);
-        } else {
-            console.log('SSH config file deleted:', path.basename(configFilePath));
-        }
-    });
-
-}
-
-
-let ssh_agent_sock = process.env.SSH_AUTH_SOCK;
-if (fs.existsSync(ssh_agent_sock)) {
-    console.log('SSH agent is running.');
-    let noteName = process.argv[2]
-    if (typeof noteName == 'string') {
-        if (noteName.toLowerCase() === "lock") {
-            bw_lock_ssh_key_del()
-        } else {
-            bw_check_status_go(noteName)
+    if (filePath) {
+        // If file path is given, read the file content synchronously
+        try {
+            const fileData = fs.readFileSync(filePath, 'utf8');
+            //console.log('File content:\n', data);
+            process_ssh_config_pkey(fileData)
+        } catch (err) {
+            console.error('Error reading the file:', err.message);
         }
     } else {
-        console.log("Invalid note name argument")
-        console.info("Valid argument is any note name containing private key or lock")
+        // If no file path is provided, read clipboard content
+        try {
+            const clipboardContent = clipboardy.readSync();
+            //console.log('Clipboard content:\n', clipboardContent);
+            process_ssh_config_pkey(clipboardContent)
+        } catch (err) {
+            console.error('Error reading clipboard:', err.message);
+        }
     }
-} else {
-    console.log('SSH agent not found. Please run ssh-agent process first.');
-    console.info("You can try the following command to run ssh-agent:\n > eval $(ssh-agent -s)")
+
 }
 
+
+async function main(){
+
+    let ssh_agent_sock = process.env.SSH_AUTH_SOCK;
+    if (fs.existsSync(ssh_agent_sock)) {
+        console.log('SSH agent is running...');
+        let command = process.argv[2]?.toLowerCase()
+
+        if (typeof command == 'string') {
+            if (command === "clear") {
+                await clear()
+            } else {
+                get_contents()
+            }
+        } else if(typeof command == "undefined") {
+            get_contents()
+        } else {
+            console.warn("Invalid command or argument")
+            console.info("Valid command is \"clear\" and argument is file path or empty argument with contents in the clipboard")
+        }
+    } else {
+        console.log('SSH agent not found. Please run ssh-agent process first.');
+        console.info("You can try the following command to run ssh-agent:\n > eval $(ssh-agent -s)")
+    }
+}
+
+main()
