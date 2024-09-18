@@ -59,7 +59,13 @@ npm install -g bw-gpk
     ```
     **Note:** For clipboard use, ensure that you have copied the note form Bitwarden.
 
-3.  **Clear keys and configs:** After using the tool, securely delete the private keys from ssh-agent and delete the ssh configs with:
+3.  **List Hosts and IPs:** To see the Host and IPs/Hostnames in the ssh config file run the command:
+
+    ```
+    bw-gpk hosts
+    ```
+
+4.  **Clear keys and configs:** After using the tool, securely delete the private keys from ssh-agent and delete the ssh configs with:
 
     ```
     bw-gpk clear
