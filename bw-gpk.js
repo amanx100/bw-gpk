@@ -15,13 +15,13 @@ const configFilePath = userHomeDir + '/.ssh/config'
 // Checking the .bw-gpk directory to keep the relevant files
 try {
     fs.mkdirSync(directoryPath);
-    console.log('Directory created: ' + directoryPath);
+    //console.log('Directory created: ' + directoryPath);
 } catch (err) {
-    if (err.code === 'EEXIST') {
+    /*if (err.code === 'EEXIST') {
         console.log('Directory exists: ' + directoryPath);
     } else {
-        console.error(err);
-    }
+        console.error(err.message);
+    }*/
 }
 
 async function process_ssh_config_pkey(data) {
@@ -30,84 +30,77 @@ async function process_ssh_config_pkey(data) {
 
     let privateKeysString = data
 
-    const regex = /(-+)BEGIN(.*)KEY(-+)(\s.+)*END(.*)KEY(-+)/g;
-    const regexHost = /Host (\S+ *)(\s +\S+ +\S+ *)+/g;
-    const keyBlocks = privateKeysString.match(regex);
-    const hostBlocks = privateKeysString.match(regexHost);
+    const keyBlocks = privateKeysString.match(/(-+)BEGIN(.*)KEY(-+)(\s.+)*END(.*)KEY(-+)/g);
+    const hostBlocks = privateKeysString.match(/Host (\S+ *)(\s +\S+ +\S+ *)+/g);
 
-    let i = 0
-    for (const block of keyBlocks) {
-        i++
+   if(keyBlocks && keyBlocks.length){
+       let i = 0;
+       for (const block of keyBlocks) {
+           i++;
+           const tempFilePath = path.join(directoryPath, 'key_' + i + '.pem');
 
-        //console.log(block)
-        const tempFilePath = path.join(directoryPath, 'key_' + i + '.pem');
-        const writeStream = fs.createWriteStream(tempFilePath);
+           try {
+               // Write the file synchronously
+               fs.writeFileSync(tempFilePath, block + "\n")
+               console.log(`Private key ${i} extracted: ${path.basename(tempFilePath)}`)
 
-        writeStream.write(block + "\n");
-        writeStream.end(() => {
-            console.log('Temp file created:', path.basename(tempFilePath));
+               // Execute the commands synchronously
+               execSync(`chmod 600 ${tempFilePath} && ssh-add ${tempFilePath}`)
+               //console.log(`Private key ${i} loaded to ssh-agent: ${path.basename(tempFilePath)}`)
 
-            exec(`chmod 600 ${tempFilePath} && ssh-add  ${tempFilePath}`, (error, stdout, stderr) => {
-                // Delete the temp file when done
-                fs.unlink(tempFilePath, (err) => {
-                    if (err) {
-                        console.error('Error deleting temp file [' + tempFilePath + ']:', err);
-                    } else {
-                        console.log('Temp file deleted:', path.basename(tempFilePath));
-                    }
-                });
-                if (error) {
-                    console.error(`Error executing command: ${error.message}`);
-                } else {
-                    console.log(`${stdout}`);
-                    console.error(`${stderr}`);
-                }
-            });
+               // Delete the file synchronously
+               fs.unlinkSync(tempFilePath)
+               console.log(`Private key ${i} deleted: ${path.basename(tempFilePath)}`)
+           } catch (e) {
+               console.error(e.message)
+           }
+       }
+   } else {
+       console.warn("No key blocks found!")
+       console.info("Example key block: ", `
+-----BEGIN OPENSSH PRIVATE KEY-----
+<PrivateKeyContents>
+-----END OPENSSH PRIVATE KEY-----`)
+   }
 
-        });
 
-    }
+   if(hostBlocks && hostBlocks.length){
+       let configFileContent = "";
+       for (const block of hostBlocks) {
+           configFileContent += block + "\n\n";
+       }
 
-    let configFileContent = ""
-    for (const block of hostBlocks){
-        configFileContent += block + "\n\n"
-    }
+       try {
+           // Write the content synchronously
+           fs.writeFileSync(configFilePath, configFileContent);
+           console.log('SSH Config file created:', configFilePath);
+       } catch (err) {
+           console.error(err.message);
+       }
+   }else {
+       console.warn("No host blocks found!")
+       console.info("Example host block: ", `
+Host hostname1
+  Hostname <IP/FQDN>
+  User <UserName>`)
+   }
 
-    //console.log(configFileContent)
-    const writeStreamHc = fs.createWriteStream(configFilePath);
-
-    writeStreamHc.write(configFileContent);
-    writeStreamHc.end(() => {
-        console.log('SSH Config file created:', path.basename(configFilePath));
-    });
 }
-
 
 async function clear() {
+    try {
+        // Synchronously delete all identities from the ssh-agent
+        const agentDelOutput = await execSync('ssh-add -D');
+        console.log(`Private keys removed from ssh-agent`);
 
-    const promise_agent_del = await new Promise((resolve, reject)=>{
-        exec('ssh-add -D', (error, stdout, stderr) => {
-            if (error) {
-                reject(error.message)
-            } else {
-                resolve(stdout)
-            }
-        });
-    })
+        // Synchronously delete the SSH config file
+        await fs.unlinkSync(configFilePath);
+        console.log('SSH config file deleted:', configFilePath);
 
-    const promise_file_del = await new Promise((resolve, reject)=>{
-        fs.unlink(configFilePath, (err) => {
-            if (err) {
-                reject(err.message)
-            } else {
-                resolve('SSH config file deleted:', path.basename(configFilePath))
-            }
-        });
-    })
-
-    return {promise_agent_del, promise_file_del}
+    } catch (error) {
+        console.error(error.message);
+    }
 }
-
 
 async function get_contents() {
 
@@ -128,7 +121,11 @@ async function get_contents() {
         try {
             const clipboardContent = clipboardy.readSync();
             //console.log('Clipboard content:\n', clipboardContent);
-            process_ssh_config_pkey(clipboardContent)
+            if(clipboardContent){
+                process_ssh_config_pkey(clipboardContent)
+            }else{
+                console.warn("Your clipboard is empty!")
+            }
         } catch (err) {
             console.error('Error reading clipboard:', err.message);
         }
