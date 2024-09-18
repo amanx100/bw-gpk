@@ -134,6 +134,36 @@ async function get_contents() {
 }
 
 
+async function listHosts(filePath) {
+    // Read the file synchronously
+    const fileContent = await fs.readFileSync(filePath, 'utf-8');
+
+    // Split the file content into lines
+    const lines = fileContent.split('\n');
+
+    // Initialize variables to store the host and hostname
+    let host = '';
+    let hostname = '';
+
+    // Loop through each line
+    lines.forEach((line) => {
+        line = line.trim(); // Remove leading/trailing spaces
+
+        if (line.startsWith('Host ')) {
+            host = line.split(' ')[1]; // Get the host name
+        }
+
+        if (line.startsWith('Hostname')) {
+            hostname = line.split(' ')[1]; // Get the hostname
+
+            // Print the result
+            console.log(`${hostname} ${host}`);
+        }
+    });
+}
+
+
+
 async function main(){
 
     let ssh_agent_sock = process.env.SSH_AUTH_SOCK;
@@ -142,8 +172,10 @@ async function main(){
         let command = process.argv[2]?.toLowerCase()
 
         if (typeof command == 'string') {
-            if (command === "clear") {
+            if (command == "clear") {
                 await clear()
+            } else if (command == "hosts") {
+                await listHosts(configFilePath)
             } else {
                 get_contents()
             }
