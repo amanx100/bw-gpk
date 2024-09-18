@@ -1,6 +1,6 @@
 # bw-gpk
 
-**Bitwarden Get Private Key (bw-gpk)** is a command-line tool designed to fetch private keys from Bitwarden notes and securely load them into the SSH agent. It also assists in creating and manage a well-formatted SSH config file.
+**Bitwarden Get Private Key (bw-gpk)** CLI tool is to fetch the clipboard directly or text file then create ssh config file and load the private keys to the ssh-agent securely.
 
 ## Installation
 
@@ -8,13 +8,6 @@ To install `bw-gpk`, use npm:
 
 ```
 npm install -g bw-gpk
-``` 
-
-Additionally, you need to have the Bitwarden CLI installed and accessable from your terminal. You can install it with:
-
-
-```
-npm install -g @bitwarden/cli
 ```
 
 ## Usage
@@ -59,28 +52,31 @@ npm install -g @bitwarden/cli
 2.  **Using `bw-gpk`:** After creating the Bitwarden note, use the `bw-gpk` tool to load private keys into the SSH agent. Run the following command:
 
     ```
-    bw-gpk <bw-note-name>
+    # fetch the content from Clipboard
+    bw-gpk
+    # or fetch the content from local file
+    bw-gpk <bw-note-path>
     ```
-    **Note:** Ensure that you're logged into Bitwarden CLI and have unlocked your vault before using `bw-gpk`.
+    **Note:** For clipboard use, ensure that you have copied the note form Bitwarden.
 
-3.  **Lock Bitwarden Vault:** After using the tool, securely delete and lock the Bitwarden vault with:
+3.  **Clear keys and configs:** After using the tool, securely delete the private keys from ssh-agent and delete the ssh configs with:
 
     ```
-    bw-gpk lock
+    bw-gpk clear
     ```
 
 ## Example
 
-Suppose you have a Bitwarden note named `my-ssh-keys` containing SSH configurations and private keys. To load these keys into the SSH agent, run:
+Suppose you have a Bitwarden note named `my-ssh-keys` containing SSH configurations and private keys. To load these keys into the SSH agent, copy the node and then run:
 
   ```
-  bw-gpk my-ssh-keys
+  bw-gpk
   ```
 
-To securely delete and lock the Bitwarden vault after use, run:
+To securely delete the configs and private keys, run:
 
   ```
-  bw-gpk lock
+  bw-gpk clear
   ```
 
 
